@@ -1,527 +1,433 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  CheckCircle2, XCircle, RefreshCw, Play, ArrowRight, 
-  Home, Award, BarChart, Layers, Clock, AlertTriangle, 
-  History, Trash2, ChevronLeft, Calendar
-} from 'lucide-react';
-
-// 擴充至 100 個任務的任務庫 (50 基礎 + 50 進階)
-const TASKS_LIBRARY = [
-  // --- 基礎版 (5 步驟) ---
-  { id: 1, difficulty: 'basic', title: "早起刷牙", icon: "🪥", steps: ["拿起牙刷與牙膏", "將牙膏擠在牙刷上", "放入口中均勻刷遍牙齒", "用水漱口並吐掉泡沫", "清洗牙刷並放回原位"] },
-  { id: 2, difficulty: 'basic', title: "洗手消毒", icon: "🧼", steps: ["打開水龍頭弄濕雙手", "抹上肥皂並搓出泡沫", "搓揉手心手背與指縫", "用清水將泡沫沖乾淨", "用乾淨毛巾將手擦乾"] },
-  { id: 3, difficulty: 'basic', title: "穿襯衫", icon: "👔", steps: ["拿起襯衫披在肩上", "右手伸進右邊袖子", "左手伸進左邊袖子", "由下往上扣好扣子", "調整領口並照鏡子"] },
-  { id: 4, difficulty: 'basic', title: "泡一杯茶", icon: "🍵", steps: ["將茶包放進杯子中", "燒開一壺乾淨的水", "將熱水倒入杯子中", "等待約三分鐘出味", "取出茶包後慢慢享用"] },
-  { id: 5, difficulty: 'basic', title: "澆花水", icon: "🚿", steps: ["拿取澆水壺並裝水", "走到盆栽旁邊", "緩慢將水倒入土壤", "觀察水是否流出底部", "將水壺收回原位"] },
-  { id: 6, difficulty: 'basic', title: "丟垃圾", icon: "🗑️", steps: ["整理並綁好垃圾袋", "將袋子提到門口", "等待垃圾車音樂聲", "將垃圾投進垃圾車", "回家後用肥皂洗手"] },
-  { id: 7, difficulty: 'basic', title: "吃藥藥", icon: "💊", steps: ["核對藥包姓名與時間", "倒一杯溫開水準備", "取出正確劑量的藥片", "將藥片含入口中送服", "將水喝完並觀察反應"] },
-  { id: 8, difficulty: 'basic', title: "摺衣服", icon: "👕", steps: ["從晾衣繩收下衣物", "平鋪在乾淨的床上", "對摺兩袖與身躯", "對齊邊緣整齊收納", "放回衣櫃指定抽屜"] },
-  { id: 9, difficulty: 'basic', title: "使用微波爐", icon: "⏲️", steps: ["將食物放進微波盒", "放入微波爐並關門", "旋轉或輸入加熱時間", "等待提示音響起", "取出食物並小心燙手"] },
-  { id: 10, difficulty: 'basic', title: "梳頭髮", icon: "🪮", steps: ["站在鏡子前面", "拿起梳子或髮刷", "從髮根梳向髮梢", "整理出整齊的髮型", "清理梳子上的髮絲"] },
-  { id: 11, difficulty: 'basic', title: "洗水果", icon: "🍎", steps: ["將水果放入濾籃中", "用流動清水沖洗表面", "輕輕搓揉水果外皮", "瀝乾多餘的水分", "放入盤子中準備食用"] },
-  { id: 12, difficulty: 'basic', title: "穿鞋子", icon: "👟", steps: ["坐在穿鞋椅上", "雙腳套入鞋內", "拉好鞋跟並整理襪子", "繫好鞋帶或黏上魔鬼氈", "站起來走動確認舒適度"] },
-  { id: 13, difficulty: 'basic', title: "整理床鋪", icon: "🛌", steps: ["下床後拉平床單", "將棉被對摺整齊", "拍鬆枕頭並放好", "拉直四周的摺痕", "放上裝飾小枕或玩偶"] },
-  { id: 14, difficulty: 'basic', title: "煮水餃", icon: "🥟", steps: ["大鍋裝水燒至沸騰", "放入冷凍水餃", "用勺子輕輕攪動防黏", "待水餃浮起後再煮一分", "撈起瀝乾裝盤"] },
-  { id: 15, difficulty: 'basic', title: "倒水喝", icon: "🥛", steps: ["拿取乾淨的水杯", "走到飲水機或水壺旁", "平穩地將水注入杯中", "倒至約八分滿處停止", "收回杯子並關閉開關"] },
-  { id: 16, difficulty: 'basic', title: "掃地", icon: "🧹", steps: ["拿起掃帚與畚箕", "從房間角落往內掃", "將灰塵集中成一堆", "掃進畚箕內倒進垃圾桶", "放回清潔用具"] },
-  { id: 17, difficulty: 'basic', title: "換燈泡", icon: "💡", steps: ["關閉電源開關", "準備好新的燈泡", "轉下燒壞的舊燈泡", "轉入新燈泡至卡緊", "打開開關測試亮度"] },
-  { id: 18, difficulty: 'basic', title: "寄信", icon: "✉️", steps: ["寫好信件與收件地址", "貼上正確金額郵票", "檢查信封是否封好", "走到街邊的郵筒旁", "將信件投入收信口"] },
-  { id: 19, difficulty: 'basic', title: "烤吐司", icon: "🍞", steps: ["取出兩片白吐司", "放進烤吐司機內", "設定加熱焦度等級", "待吐司彈起後取出", "抹上喜歡的果醬"] },
-  { id: 20, difficulty: 'basic', title: "聽音樂", icon: "🎵", steps: ["打開播放器或手機", "戴上耳機或打開喇叭", "搜尋想聽的歌手名稱", "點選播放開始聆聽", "調整到舒適音量"] },
-  { id: 21, difficulty: 'basic', title: "修剪指甲", icon: "✂️", steps: ["準備好指甲剪", "找一個光線充足處", "細心修剪指甲邊緣", "用銼刀磨平粗糙處", "清理剪下的指甲屑"] },
-  { id: 22, difficulty: 'basic', title: "搭公車", icon: "🚌", steps: ["在公車站牌等候", "看到車號招手示意", "上車刷卡或投幣", "注意站名預備下車", "按下車鈴並刷卡下車"] },
-  { id: 23, difficulty: 'basic', title: "使用遙控器", icon: "📺", steps: ["拿起電視遙控器", "按下紅色的開關鍵", "按頻道鍵尋找節目", "按音量鍵調整聲音", "不看時再按一次關閉"] },
-  { id: 24, difficulty: 'basic', title: "洗臉", icon: "🧼", steps: ["弄濕臉部與雙手", "擠出少量洗面乳", "在臉上劃圓搓洗", "用清水徹底沖淨", "用乾毛巾按乾臉部"] },
-  { id: 25, difficulty: 'basic', title: "摺紙飛機", icon: "✈️", steps: ["準備一張長方形紙", "對摺找出中心線", "將前端兩角向內摺", "對摺機身並壓平", "摺出左右機翼"] },
-  { id: 51, difficulty: 'basic', title: "穿外套", icon: "🧥", steps: ["抓起外套領口", "一隻手穿進袖管", "另一隻手背後尋找袖口", "兩手伸直拉好衣服", "拉上拉鍊或扣好扣子"] },
-  { id: 52, difficulty: 'basic', title: "繫安全帶", icon: "安全帶", steps: ["坐在汽車座位上", "手拉住安全帶插頭", "拉過胸前橫跨身體", "對準插槽用力插下", "聽到喀嚓聲後拉拉看"] },
-  { id: 53, difficulty: 'basic', title: "收雨傘", icon: "🌂", steps: ["走到室內屋簷下", "按下收傘按鈕或滑動", "輕輕抖掉傘面水珠", "將傘布順著傘骨捲起", "扣上魔鬼氈綑綁帶"] },
-  { id: 54, difficulty: 'basic', title: "貼OK繃", icon: "🩹", steps: ["清潔並擦乾傷口", "撕開OK繃外層包裝", "撕下其中一邊背膠紙", "對準傷口輕輕貼上", "撕掉另一邊紙並壓平"] },
-  { id: 55, difficulty: 'basic', title: "削鉛筆", icon: "✏️", steps: ["準備削鉛筆機與鉛筆", "將鉛筆插入削孔", "握住機身固定好", "順時針旋轉手把", "取出確認筆尖銳利"] },
-  { id: 56, difficulty: 'basic', title: "量體溫", icon: "🌡️", steps: ["拿出體溫計檢查數值", "放在腋下或額頭對準", "靜候幾秒鐘等待警報", "讀取螢幕上的數字", "用酒精棉片消毒儀器"] },
-  { id: 57, difficulty: 'basic', title: "戴口罩", icon: "😷", steps: ["取出乾淨的口罩", "確認正反面與上下緣", "將掛耳繩套入雙耳", "壓緊鼻樑處金屬條", "向下拉開遮住下巴"] },
-  { id: 58, difficulty: 'basic', title: "倒廚餘", icon: "🥣", steps: ["收集餐後剩餘食物", "瀝掉過多的湯汁", "倒入廚餘桶蓋緊", "提著水盆到水槽", "用洗碗精刷洗空盆"] },
-  { id: 59, difficulty: 'basic', title: "戴帽子", icon: "🧢", steps: ["挑選喜歡的帽子", "手扶住帽沿兩側", "由額頭往後腦勺套下", "調整前後位置與高低", "照鏡子確認是否端正"] },
-  { id: 60, difficulty: 'basic', title: "蓋印章", icon: "🖄", steps: ["準備文件與印章", "確認印章蓋面朝下", "在印泥上均勻沾取", "垂直對準蓋章位置", "用力下壓後垂直提起"] },
-  { id: 61, difficulty: 'basic', title: "穿襪子", icon: "🧦", steps: ["拿出一雙乾淨襪子", "雙手撐開襪口", "對準腳尖套入", "順著腳跟往上拉", "理平腳背的摺痕"] },
-  { id: 62, difficulty: 'basic', title: "關窗戶", icon: "🪟", steps: ["走向開啟的窗邊", "抓住窗戶把手", "緩緩向內或向側推移", "確認窗邊完全密合", "扣上安全鎖扣"] },
-  { id: 63, difficulty: 'basic', title: "整理報紙", icon: "📰", steps: ["收集散亂的各版報紙", "依照版序對齊邊緣", "將報紙對摺成一半", "放在指定的舊報堆", "去洗手洗掉油墨"] },
-  { id: 64, difficulty: 'basic', title: "切香蕉", icon: "🍌", steps: ["洗淨雙手並拿餐刀", "剝開香蕉的外皮", "放在乾淨的盤子上", "切成一塊塊圓形", "收拾香蕉皮丟棄"] },
-  { id: 65, difficulty: 'basic', title: "掛衣服", icon: "🧥", steps: ["準備好空衣架", "拿起洗好的衣物", "將衣架撐進領口", "調整左右肩位置", "掛入衣櫥橫桿上"] },
-  { id: 66, difficulty: 'basic', title: "翻日曆", icon: "📅", steps: ["確認今天的日期", "撕下昨天的日曆紙", "對齊虛線小心撕開", "將廢紙丟入資源回收", "看一眼今天的農曆或備註"] },
-  { id: 67, difficulty: 'basic', title: "使用訂書機", icon: "📌", steps: ["整理好要裝訂的紙張", "對齊左上角的邊緣", "將紙放進訂書機口", "用力壓下訂書機頂部", "檢查釘子是否壓平"] },
-  { id: 68, difficulty: 'basic', title: "量體重", icon: "⚖️", steps: ["將體重計放在平地", "脫掉厚重外套或鞋子", "雙腳平衡站在中央", "靜止等待數字固定", "紀錄數值後走下秤子"] },
-  { id: 69, difficulty: 'basic', title: "喝利樂包", icon: "🧃", steps: ["拿取一盒紙盒飲料", "拔下側邊的吸管", "撕開吸管塑膠套", "插入圓孔錫箔紙", "慢慢吸吮並注意溢出"] },
-  { id: 70, difficulty: 'basic', title: "梳鬍鬚", icon: "🧔", steps: ["站在鏡子前面", "拿起專用的鬍鬚梳", "從上往下梳理整齊", "修剪突出的雜亂毛髮", "用濕布擦拭臉頰"] },
-  { id: 71, difficulty: 'basic', title: "關瓦斯", icon: "🔥", steps: ["確認鍋具已移開", "旋轉爐台開關至關閉", "確認火焰完全熄滅", "檢查瓦斯管線總開關", "離開廚房前再次巡視"] },
-  { id: 72, difficulty: 'basic', title: "拿信件", icon: "📮", steps: ["拿起信箱鑰匙", "走到大門口的信箱處", "插入鑰匙並轉動門蓋", "取出所有信件與廣告", "關好信箱並拔出鑰匙"] },
-  { id: 73, difficulty: 'basic', title: "吹風扇", icon: "🌬️", steps: ["走到電風扇旁邊", "按下插頭連接電源", "選擇適合的風力強弱", "按下轉頭或固定鈕", "享受涼風並保持距離"] },
-  { id: 74, difficulty: 'basic', title: "收碗筷", icon: "🥢", steps: ["用餐完畢站起來", "將筷子放在碗面上", "雙手捧起碗盤送到水槽", "分類放置待洗區域", "擦拭自己用過的桌面"] },
-  { id: 75, difficulty: 'basic', title: "摺衛生紙", icon: "🧻", steps: ["抽取適量的衛生紙", "將紙張平鋪在手中", "左右對摺成正方形", "再次摺疊增加厚度", "放入餐盤旁或口袋備用"] },
-
-  // --- 進階版 (7 步驟) ---
-  { id: 26, difficulty: 'advanced', title: "洗衣服全流程", icon: "🧺", steps: ["分類衣物深淺色", "放進洗衣機內", "倒入洗衣精與柔軟精", "設定洗衣模式", "取出洗好的濕衣物", "衣架撐起並晾在室外", "乾透後收納入櫃"] },
-  { id: 27, difficulty: 'advanced', title: "煮泡麵加蛋", icon: "🍜", steps: ["鍋內裝水煮至沸騰", "放入泡麵麵塊", "倒入所有調味料包", "打入一顆雞蛋進入", "蓋上鍋蓋悶兩分鐘", "攪拌均勻使蛋熟透", "倒入碗中享用"] },
-  { id: 28, difficulty: 'advanced', title: "ATM 領錢", icon: "💵", steps: ["插入提款卡", "輸入個人密碼", "選擇「提款」功能", "輸入要領取的金額", "確認明細表需求", "取出提款卡與收據", "領取現金並清點"] },
-  { id: 29, difficulty: 'advanced', title: "手機充電", icon: "🔌", steps: ["找到手機充電線", "插頭插入牆壁插座", "接頭插入手機底部孔", "確認螢幕顯示充電中", "放置在安全平穩處", "充滿後先拔手機接頭", "最後拔除牆上插頭"] },
-  { id: 30, difficulty: 'advanced', title: "預約門診", icon: "🏥", steps: ["拿出手機或打開電腦", "進入醫院掛號網站", "選擇正確的科別", "挑選合適的看診醫師", "確認日期與時段", "輸入身分證字號掛號", "截圖或記錄掛號號碼"] },
-  { id: 31, difficulty: 'advanced', title: "更換床單", icon: "🛏️", steps: ["移開床上的枕頭被子", "扯下髒掉的舊床單", "鋪上乾淨的新床單", "將四個角固定在床墊", "套上乾淨的枕頭套", "放回被子並鋪平", "將舊床單丟入洗衣籃"] },
-  { id: 32, difficulty: 'advanced', title: "準備出門購物", icon: "🛒", steps: ["檢查家中缺少的物資", "寫下購物清單項目", "帶上環保購物袋", "確認錢包與手機在身上", "穿好鞋子並拿鑰匙", "鎖好家門並確認", "前往附近的超市"] },
-  { id: 33, difficulty: 'advanced', title: "製作火腿三明治", icon: "🥪", steps: ["準備吐司、火腿、起司", "吐司放進烤箱加熱", "火腿放入平底鍋煎熟", "吐司抹上美乃滋", "疊上起司與火腿", "蓋上第二片吐司", "對角切開後盛盤"] },
-  { id: 34, difficulty: 'advanced', title: "整理書桌", icon: "📚", steps: ["收起桌面所有雜物", "用抹布擦拭桌面灰塵", "將文具放回筆筒", "書籍依高度整齊排列", "分類廢棄紙張並丟棄", "整理混亂的電腦線路", "擺放一盆小植物裝飾"] },
-  { id: 35, difficulty: 'advanced', title: "清洗浴室", icon: "🚿", steps: ["戴上防護橡膠手套", "在瓷磚噴灑清潔劑", "用刷子用力搓洗地板", "沖刷掉所有髒污泡沫", "擦拭鏡子與洗臉台", "清洗馬桶內緣並沖水", "開啟通風扇晾乾浴室"] },
-  { id: 36, difficulty: 'advanced', title: "使用吸塵器", icon: "🧹", steps: ["確認吸塵器集塵盒已空", "拉出電線並插入插座", "按下啟動電源開關", "由房間最內處往外吸", "處理沙發縫隙等死角", "吸完後捲回電線", "放回儲藏室收納"] },
-  { id: 37, difficulty: 'advanced', title: "發送電子郵件", icon: "📧", steps: ["打開電腦登入信箱", "點選「撰寫」新信件", "輸入收件人地址", "寫下清楚的信件標題", "輸入正式的內容文字", "檢查是否有附件要傳", "點下發送並確認成功"] },
-  { id: 38, difficulty: 'advanced', title: "洗碗流程", icon: "🥣", steps: ["清除盤中殘餘食物", "將餐具浸泡入水槽", "菜瓜布沾取洗潔精", "搓洗油膩的碗盤", "用大量清水沖掉泡沫", "整齊倒扣在瀝水架", "用乾布擦拭流理台"] },
-  { id: 39, difficulty: 'advanced', title: "給手機裝殼", icon: "📱", steps: ["將手機關機以策安全", "用乾淨布擦拭手機背", "檢查殼內有無灰塵", "手機對齊殼的上緣", "用力壓入下方兩角", "確認開孔與按鍵對齊", "撕開螢幕保護膜"] },
-  { id: 40, difficulty: 'advanced', title: "剪報紙", icon: "📰", steps: ["翻開當日的報紙", "找到感興趣的文章", "準備剪刀與膠水", "沿著文章邊緣剪下", "在剪報本塗抹膠水", "平整貼在紙面中央", "寫下日期與報紙名稱"] },
-  { id: 41, difficulty: 'advanced', title: "參加視訊會議", icon: "💻", steps: ["提早五分鐘坐到電腦前", "確認視訊鏡頭位置", "點選會議室連結進入", "測試麥克風是否正常", "向會議成員揮手打招呼", "會議中專心筆記", "結束後點選離開會議"] },
-  { id: 42, difficulty: 'advanced', title: "到超商寄取貨", icon: "📦", steps: ["告知店員寄取貨服務", "出示手機簡訊或身分證", "確認包裹收件人姓名", "在螢幕上簽名確認", "支付相關運費或款項", "領取包裹與收據", "離開後檢查包裹完好"] },
-  { id: 43, difficulty: 'advanced', title: "烹煮咖哩飯", icon: "🍛", steps: ["將蔬菜與肉類切塊", "下鍋炒香食材至熟", "加入適量清水煮沸", "放入咖哩塊並攪拌", "轉小火燉煮至濃稠", "盛好一碗熱騰騰白飯", "將咖哩淋在白飯上"] },
-  { id: 44, difficulty: 'advanced', title: "規律運動", icon: "🧘", steps: ["換上舒適的運動服", "穿上慢跑鞋並繫好帶", "做五分鐘暖身伸展", "開始主運動如慢跑", "隨時補充足夠水分", "做五分鐘緩和運動", "回家後沖澡更衣"] },
-  { id: 45, difficulty: 'advanced', title: "出門旅行打包", icon: "🧳", steps: ["列出需要攜帶的清單", "準備合適大小行李箱", "放入換洗衣物與內衣", "放入盥洗用具包", "放入手機充電器與行動電源", "放入重要證件與藥物", "拉上拉鍊並確認重量"] },
-  { id: 46, difficulty: 'advanced', title: "整理相簿", icon: "📸", steps: ["挑選出有紀念價值的照片", "準備一本實體相簿", "在照片背後寫下日期", "將照片套入透明護袋", "依照時間順序排列", "加入小貼紙或文字說明", "將相簿放回書架保存"] },
-  { id: 47, difficulty: 'advanced', title: "修理自行車鏈條", icon: "🚲", steps: ["將單車翻轉倒立放置", "戴上髒污防護手套", "將鏈條掛回齒輪盤", "手轉踏板測試順暢度", "噴灑潤滑油於鏈條上", "用抹布擦拭多餘油漬", "反轉單車恢復正常"] },
-  { id: 48, difficulty: 'advanced', title: "使用自動洗衣店", icon: "🧺", steps: ["帶著髒衣物到自助店", "選定一台空的洗衣機", "放入衣物並關緊門", "投幣或使用儲值卡", "加入自動販賣機的蠟紙", "等待洗衣完成提示", "將衣物移至烘乾機"] },
-  { id: 49, difficulty: 'advanced', title: "種植盆栽", icon: "🪴", steps: ["挑選適合室內的植物", "在空盆中倒入底層土", "將植物移入花盆中央", "填滿四周的腐葉土", "用手輕輕壓實表面", "均勻澆水直到流出", "放置在有陽光通風處"] },
-  { id: 50, difficulty: 'advanced', title: "準備迎接客人", icon: "🤝", steps: ["確認客人的到達時間", "打掃客廳與沙發區", "準備好乾淨的水杯茶葉", "擺放一些水果或小點心", "換上整潔的家居服", "提早至門口等待門鈴", "熱情開門迎接並問候"] },
-  { id: 76, difficulty: 'advanced', title: "網路銀行轉帳", icon: "💻", steps: ["打開手機網路銀行APP", "輸入身分證與密碼登入", "選擇「即時轉帳」功能", "輸入受款人的銀行代碼", "填寫正確的銀行帳號", "輸入轉帳金額並點確認", "再次核對明細後送出"] },
-  { id: 77, difficulty: 'advanced', title: "預約計程車", icon: "🚕", steps: ["打開叫車服務APP", "確認定位為目前所在地", "手動輸入目的地點名稱", "選擇想搭乘的車型等級", "核對預估車資與時間", "按下「立即叫車」按鈕", "觀察地圖上車輛的距離"] },
-  { id: 78, difficulty: 'advanced', title: "整理藥盒(一週份)", icon: "💊", steps: ["準備一個七天分裝藥盒", "拿出所有常備藥袋核對", "依早中晚標示打開蓋子", "逐一放入正確的藥片數", "檢查每個格位有無漏放", "確實扣好每個格蓋", "將剩餘藥包收回原位"] },
-  { id: 79, difficulty: 'advanced', title: "在餐廳點餐", icon: "🍴", steps: ["坐下後翻開精美菜單", "考慮想吃的主餐與口味", "招手示意服務生到桌邊", "清楚口述想點的餐點名", "詢問有無忌口或過敏原", "確認點餐明細是否正確", "合上菜單並交還給店員"] },
-  { id: 80, difficulty: 'advanced', title: "換垃圾袋(大垃圾桶)", icon: "🗑️", steps: ["將裝滿的垃圾包紮好", "從桶內提起丟入收集區", "拿取捲筒式新垃圾袋", "撕下一張並拉開撐平", "將袋口對準垃圾桶內緣", "把多餘邊緣反摺固定住", "拍打底部使袋內無空氣"] },
-  { id: 81, difficulty: 'advanced', title: "到圖書館借書", icon: "📖", steps: ["進入圖書館保持安靜", "使用查詢機搜尋書名", "找到對應的書架與分類", "從架上取下想借的書", "持借閱證到自動借書機", "刷讀條碼並確認冊數", "領取收據並將書放入袋"] },
-  { id: 82, difficulty: 'advanced', title: "做水果沙拉", icon: "🥗", steps: ["洗淨蘋果、葡萄與番茄", "將大型水果切成適當塊狀", "放入透明的沙拉大碗中", "加入優格或少許蜂蜜", "用夾子輕輕攪拌均勻", "灑上一些堅果或碎餅乾", "放進冰箱冷藏後享用"] },
-  { id: 83, difficulty: 'advanced', title: "清洗抽油煙機濾網", icon: "🍳", steps: ["關閉廚房瓦斯與電源", "旋下濾網固定螺絲", "放入加了小蘇打的熱水", "浸泡十五分鐘分解油垢", "用鋼刷用力刷洗網格", "用清水沖淨殘留泡沫", "晾乾後重新裝回機身"] },
-  { id: 84, difficulty: 'advanced', title: "辦理飯店入住", icon: "🏨", steps: ["抵達櫃台出示身分證件", "核對訂房日期與房型", "在入住表格上親自簽名", "聽取早餐時間與設施說明", "領取房間感應房卡", "確認行李是否需要運送", "搭乘電梯尋找房間號碼"] },
-  { id: 85, difficulty: 'advanced', title: "使用咖啡機(膠囊式)", icon: "☕", steps: ["確認後方水箱水量充足", "按下開關預熱至綠燈亮", "打開上蓋放入咖啡膠囊", "放下把手鎖緊膠囊倉", "將杯子放在出水口下方", "按大杯或小杯啟動萃取", "丟棄用過的膠囊並關機"] },
-  { id: 86, difficulty: 'advanced', title: "整理舊衣捐贈", icon: "🧥", steps: ["檢查衣物有無破損汙漬", "將不穿的衣物分類整理", "用洗衣機清洗並曬乾", "整齊摺疊放入紙箱中", "封好箱口並寫上捐贈類", "上網尋找合法的公益團體", "親自載送或請物流來收"] },
-  { id: 87, difficulty: 'advanced', title: "安裝視訊軟體(Zoom)", icon: "💻", steps: ["打開網頁瀏覽器搜尋官網", "點選下載按鈕下載安裝檔", "點擊兩下安裝檔開始安裝", "輸入電子信箱註冊帳號", "到信箱點選驗證信啟用", "設定個人頭像與顯示名稱", "輸入會議編號測試鏡頭"] },
-  { id: 88, difficulty: 'advanced', title: "清洗空調濾網", icon: "❄️", steps: ["拔掉室內機電源插頭", "雙手打開室內機外蓋", "小心取出黑色尼龍濾網", "用蓮蓬頭沖洗灰塵積累面", "放在陰涼處完全風乾", "依序推回原槽位並扣緊", "插回電源啟動送風測試"] },
-  { id: 89, difficulty: 'advanced', title: "到郵局寄包裹", icon: "📦", steps: ["將物品放入結實的紙箱", "填寫寄件人與收件人姓名", "持箱子到郵局抽取號碼牌", "等候叫號並搬上櫃台秤重", "選擇掛號或快捷寄送方式", "支付運費並領取執據", "記錄單號以便後續追蹤"] },
-  { id: 90, difficulty: 'advanced', title: "使用烘衣機", icon: "🔥", steps: ["將脫水後的濕衣物放入", "清理過濾網上的棉絮", "關緊烘衣機圓形玻璃門", "依材質設定烘乾溫度", "投幣或點選啟動按鈕", "等待運轉結束警告音", "取出熱騰騰的乾衣物"] },
-  { id: 91, difficulty: 'advanced', title: "搭乘高鐵(購票到乘車)", icon: "🚄", steps: ["到自動售票機選擇車次", "輸入身分證字號與張數", "投入紙鈔或刷卡付費", "領取實體磁卡車票", "將票插入閘門感應進入", "找到對應的月台與車廂", "對號入座並繫好餐桌"] },
-  { id: 92, difficulty: 'advanced', title: "更新手機系統", icon: "📱", steps: ["進入手機的「設定」選單", "點選「軟體更新」項目", "按下載並安裝更新檔案", "確認電量充足或接上充電", "等待進度條跑完並重啟", "輸入密碼重新進入主畫面", "檢查新功能是否運作正常"] },
-  { id: 93, difficulty: 'advanced', title: "準備家庭聚餐菜單", icon: "🥘", steps: ["確認聚餐人數與飲食偏好", "挑選冷盤、主菜與湯品", "列出所需食材與調味料", "提早一天到市場採買", "清洗食材並進行前處理", "依序下鍋烹飪各種料理", "擺盤上桌並裝飾餐飲區"] },
-  { id: 94, difficulty: 'advanced', title: "使用電子地圖導航", icon: "📍", steps: ["打開Google地圖應用程式", "輸入要去的地標或地址", "選擇交通方式(車、步、車)", "點選下方「開始導航」鈕", "依照語音指示進行轉彎", "注意路標與導航箭頭方向", "抵達終點後關閉導航程式"] },
-  { id: 95, difficulty: 'advanced', title: "申請會員卡(實體店面)", icon: "💳", steps: ["詢問店員有無會員制度", "填寫姓名、電話與生日表", "勾選同意個資處理說明", "交還給店員進行電腦建檔", "當場領取或設定電子卡號", "下載店家的專屬手機APP", "首次消費累積紅利點數"] },
-  { id: 96, difficulty: 'advanced', title: "清洗窗簾", icon: "🪟", steps: ["搬梯子卸下窗簾掛鉤", "取下所有金屬或塑膠扣", "放入大型洗衣袋保護", "使用中性洗劑進行弱洗", "脫水後在陰涼處吊掛晾乾", "用蒸氣熨斗燙平摺痕", "重新掛回窗桿並整理摺皺"] },
-  { id: 97, difficulty: 'advanced', title: "設定鬧鐘(多個時段)", icon: "⏰", steps: ["打開手機時鐘應用程式", "切換到「鬧鐘」分頁", "按加號新增一個起床時間", "設定鈴聲與震動模式", "儲存後再按加號設午睡鐘", "檢查右上角鬧鐘圖示有無", "睡前確認音量是否開啟"] },
-  { id: 98, difficulty: 'advanced', title: "領取網路購物包裹(i郵箱)", icon: "📦", steps: ["收到取件代碼簡訊通知", "走到最近的i郵箱櫃位前", "點選螢幕上的「領取郵件」", "輸入手機號碼與簡訊代碼", "等待對應的櫃門自動彈開", "取出包裹並確實關好門", "掃描包裹確認無誤後離開"] },
-  { id: 99, difficulty: 'advanced', title: "整理盆栽枯葉", icon: "🪴", steps: ["搬盆栽到光線充足處", "戴上園藝手套準備剪刀", "仔細檢查植物發黃葉片", "從葉柄基部斜剪下枯葉", "清理土表掉落的枯枝落葉", "輕輕翻動表層土壤通氣", "噴灑適量水分保持濕潤"] },
-  { id: 100, difficulty: 'advanced', title: "規劃一日旅遊行程", icon: "🗺️", steps: ["決定想去的城市或主題", "上網搜尋必去景點與美食", "在地圖上安排順路的動線", "估計每個點的停留時間", "查閱交通工具時刻表", "預約熱門餐廳或門票", "將行程存入手機備忘錄"] }
-];
-
-const App = () => {
-  // 遊戲狀態
-  const [gameState, setGameState] = useState('menu'); // 'menu', 'taskSelection', 'playing', 'result', 'history'
-  const [difficulty, setDifficulty] = useState(null);
-  const [currentTask, setCurrentTask] = useState(null);
-  const [shuffledOptions, setShuffledOptions] = useState([]);
-  const [userSequence, setUserSequence] = useState([]);
-  const [feedback, setFeedback] = useState(null);
-  
-  // 紀錄數據
-  const [timer, setTimer] = useState(0);
-  const [mistakes, setMistakes] = useState(0);
-  const [historyRecords, setHistoryRecords] = useState([]);
-  
-  const timerRef = useRef(null);
-
-  // 初始化計時器
-  useEffect(() => {
-    if (gameState === 'playing') {
-      timerRef.current = setInterval(() => {
-        setTimer(prev => prev + 1);
-      }, 1000);
-    } else {
-      clearInterval(timerRef.current);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [gameState]);
-
-  // 選難度
-  const selectDifficulty = (diff) => {
-    setDifficulty(diff);
-    setGameState('taskSelection');
-  };
-
-  // 開始特定任務
-  const startTask = (task) => {
-    setCurrentTask(task);
-    const shuffled = [...task.steps].sort(() => Math.random() - 0.5);
-    setShuffledOptions(shuffled);
-    setUserSequence([]);
-    setFeedback(null);
-    setTimer(0);
-    setMistakes(0);
-    setGameState('playing');
-  };
-
-  // 處理點擊步驟
-  const handleStepClick = (step) => {
-    if (feedback === 'correct' || userSequence.includes(step)) return;
-
-    const nextSequence = [...userSequence, step];
-    const currentIndex = nextSequence.length - 1;
-
-    // 檢查正確性
-    if (step !== currentTask.steps[currentIndex]) {
-      setFeedback('incorrect');
-      setMistakes(prev => prev + 1);
-      // 自動移除錯誤選項
-      setTimeout(() => {
-        setFeedback(null);
-      }, 1000);
-    } else {
-      setUserSequence(nextSequence);
-      if (nextSequence.length === currentTask.steps.length) {
-        setFeedback('correct');
-        // 儲存紀錄
-        const newRecord = {
-          id: Date.now(),
-          title: currentTask.title,
-          difficulty: currentTask.difficulty,
-          time: timer,
-          errors: mistakes,
-          date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-        };
-        setHistoryRecords(prev => [newRecord, ...prev]);
-        setTimeout(() => setGameState('result'), 1500);
-      }
-    }
-  };
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const resetToMenu = () => {
-    setGameState('menu');
-    setDifficulty(null);
-    setCurrentTask(null);
-  };
-
-  const filteredTasks = TASKS_LIBRARY.filter(t => t.difficulty === difficulty);
-
-  return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans text-slate-800">
-      <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
-        
-        {/* Header */}
-        <div className="bg-indigo-700 p-6 text-white flex justify-between items-center shadow-lg">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center tracking-tight">
-              <Layers className="mr-2" size={26} /> 生活步驟大師
-            </h1>
-            <p className="text-indigo-200 text-xs mt-1 uppercase tracking-widest font-semibold">100+ 任務訓練系統</p>
-          </div>
-          <div className="flex gap-2">
-            {gameState !== 'menu' && (
-              <button onClick={() => setGameState('history')} className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-full transition-all shadow-inner">
-                <History size={20} />
-              </button>
-            )}
-            {gameState !== 'menu' && (
-              <button onClick={resetToMenu} className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-full transition-all shadow-inner">
-                <Home size={20} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="p-6">
-          {/* 主選單：難度選擇 */}
-          {gameState === 'menu' && (
-            <div className="space-y-6 text-center py-4">
-              <div className="flex justify-center gap-4 mb-2">
-                <button 
-                   onClick={() => setGameState('history')}
-                   className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors font-bold text-sm"
-                >
-                  <History size={16} /> 查看歷史成績
-                </button>
-              </div>
-              <h2 className="text-xl font-bold text-slate-600">請選擇挑戰難度：</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button 
-                  onClick={() => selectDifficulty('basic')}
-                  className="group relative overflow-hidden p-8 bg-white border-4 border-emerald-100 rounded-3xl hover:border-emerald-500 transition-all hover:shadow-xl"
-                >
-                  <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Layers size={120} />
-                  </div>
-                  <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">🌱</div>
-                  <h3 className="text-2xl font-black text-emerald-700">基礎等級</h3>
-                  <div className="mt-3 flex flex-col items-center">
-                     <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold mb-1">50 個任務</span>
-                     <span className="text-emerald-600/70 font-bold">每題 5 步驟</span>
-                  </div>
-                </button>
-                <button 
-                  onClick={() => selectDifficulty('advanced')}
-                  className="group relative overflow-hidden p-8 bg-white border-4 border-amber-100 rounded-3xl hover:border-amber-500 transition-all hover:shadow-xl"
-                >
-                  <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Layers size={120} />
-                  </div>
-                  <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">🌳</div>
-                  <h3 className="text-2xl font-black text-amber-700">進階等級</h3>
-                  <div className="mt-3 flex flex-col items-center">
-                     <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold mb-1">50 個任務</span>
-                     <span className="text-amber-600/70 font-bold">每題 7 步驟</span>
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 任務清單 */}
-          {gameState === 'taskSelection' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b pb-4 mb-4">
-                <button onClick={() => setGameState('menu')} className="flex items-center text-indigo-600 font-bold hover:translate-x-1 transition-transform">
-                  <ChevronLeft size={20} /> 返回難度選擇
-                </button>
-                <div className={`px-4 py-1 rounded-full text-xs font-black uppercase ${difficulty === 'basic' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                   {difficulty === 'basic' ? '基礎任務' : '進階任務'}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 gap-3 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
-                {filteredTasks.map((task) => (
-                  <button
-                    key={task.id}
-                    onClick={() => startTask(task)}
-                    className="flex items-center p-4 bg-slate-50 border-2 border-transparent rounded-2xl hover:bg-white hover:border-indigo-400 hover:shadow-lg transition-all text-left group"
-                  >
-                    <span className="text-3xl mr-4 bg-white w-12 h-12 flex items-center justify-center rounded-xl shadow-sm group-hover:scale-110 transition-transform">{task.icon}</span>
-                    <div className="flex-1">
-                       <span className="text-lg font-bold text-slate-700 block">{task.title}</span>
-                       <span className="text-xs text-slate-400 font-medium">任務 ID: #{task.id}</span>
-                    </div>
-                    <ArrowRight size={18} className="text-slate-300 group-hover:text-indigo-500" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 歷史成績單 */}
-          {gameState === 'history' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b pb-4 mb-4">
-                <h2 className="text-xl font-black text-slate-700 flex items-center">
-                  <History className="mr-2 text-indigo-600" /> 學習成就榜
-                </h2>
-                <button 
-                  onClick={() => setHistoryRecords([])} 
-                  className="text-red-400 hover:text-red-600 flex items-center text-xs font-bold"
-                >
-                  <Trash2 size={14} className="mr-1" /> 清除所有記錄
-                </button>
-              </div>
-              
-              {historyRecords.length === 0 ? (
-                <div className="py-20 text-center text-slate-400">
-                  <BarChart size={48} className="mx-auto mb-4 opacity-20" />
-                  <p className="font-bold">目前還沒有挑戰紀錄喔！</p>
-                  <button onClick={() => setGameState('menu')} className="mt-4 text-indigo-600 font-bold underline">現在就去練習</button>
-                </div>
-              ) : (
-                <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                  {historyRecords.map(record => (
-                    <div key={record.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`w-2 h-2 rounded-full ${record.difficulty === 'basic' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                          <h4 className="font-black text-slate-700">{record.title}</h4>
-                        </div>
-                        <div className="flex items-center text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
-                          <Calendar size={12} className="mr-1" /> {record.date}
-                        </div>
-                      </div>
-                      <div className="flex gap-4">
-                        <div className="text-center">
-                          <div className="text-xs text-slate-400 font-bold">耗時</div>
-                          <div className="font-black text-indigo-600">{formatTime(record.time)}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-slate-400 font-bold">錯誤</div>
-                          <div className={`font-black ${record.errors > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{record.errors}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <button 
-                onClick={() => setGameState('menu')}
-                className="w-full mt-4 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-colors"
-              >
-                返回主選單
-              </button>
-            </div>
-          )}
-
-          {/* 遊戲進行中 */}
-          {gameState === 'playing' && currentTask && (
-            <div className="space-y-6">
-              {/* 頂部數據列 */}
-              <div className="flex justify-between items-center bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
-                <div className="flex items-center text-indigo-600 font-black">
-                  <Clock size={16} className="mr-1" /> {formatTime(timer)}
-                </div>
-                <div className="flex items-center text-red-500 font-black">
-                  <AlertTriangle size={16} className="mr-1" /> 錯誤: {mistakes}
-                </div>
-              </div>
-
-              <div className="text-center">
-                <span className="text-5xl mb-2 block">{currentTask.icon}</span>
-                <h2 className="text-2xl font-black text-slate-800 tracking-tight">{currentTask.title}</h2>
-                <p className="text-slate-400 text-sm font-bold">請按正確順序點選下方步驟</p>
-              </div>
-
-              {/* 已完成步驟區域 */}
-              <div className="min-h-[160px] bg-indigo-50/50 rounded-3xl p-5 border-2 border-dashed border-indigo-200">
-                <div className="flex flex-wrap gap-3">
-                  {userSequence.map((step, idx) => (
-                    <div key={idx} className="bg-white text-indigo-700 border-2 border-indigo-600 px-4 py-2 rounded-2xl flex items-center shadow-sm animate-in zoom-in-50 duration-300">
-                      <span className="mr-3 font-black bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px]">
-                        {idx + 1}
-                      </span>
-                      <span className="font-bold text-sm">{step}</span>
-                    </div>
-                  ))}
-                  {userSequence.length === 0 && (
-                    <div className="flex flex-col items-center justify-center w-full py-10 text-indigo-300">
-                      <Layers size={32} className="mb-2 opacity-20" />
-                      <p className="font-black italic text-sm">等待第一個步驟...</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* 即時回饋 */}
-              <div className="h-6 flex justify-center items-center">
-                {feedback === 'correct' && (
-                  <div className="flex items-center text-emerald-600 font-black animate-bounce text-sm">
-                    <CheckCircle2 className="mr-2" size={18} /> 太棒了！進步神速！
-                  </div>
-                )}
-                {feedback === 'incorrect' && (
-                  <div className="flex items-center text-red-500 font-black animate-shake text-sm">
-                    <XCircle className="mr-2" size={18} /> 順序好像有點問題喔！
-                  </div>
-                )}
-              </div>
-
-              {/* 待選區 */}
-              <div className="grid grid-cols-1 gap-2">
-                {shuffledOptions.map((step, idx) => {
-                  const isSelected = userSequence.includes(step);
-                  return (
-                    <button
-                      key={idx}
-                      disabled={isSelected || feedback === 'incorrect' || feedback === 'correct'}
-                      onClick={() => handleStepClick(step)}
-                      className={`text-left p-4 rounded-2xl border-2 transition-all duration-300 font-bold ${
-                        isSelected 
-                        ? 'bg-slate-50 border-slate-100 text-slate-300 line-through scale-95' 
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-400 hover:bg-indigo-50 active:scale-95 shadow-sm'
-                      }`}
-                    >
-                      {step}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 結算結果 */}
-          {gameState === 'result' && (
-            <div className="text-center py-8 space-y-6">
-              <div className="relative inline-block">
-                <div className="p-8 bg-yellow-50 rounded-full text-yellow-500 animate-pulse">
-                  <Award size={80} strokeWidth={2.5} />
-                </div>
-                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-black px-3 py-1 rounded-full shadow-lg">
-                  完成任務！
-                </div>
-              </div>
-              
-              <div className="space-y-1">
-                <h2 className="text-3xl font-black text-slate-800">挑戰大成功！</h2>
-                <p className="text-slate-500 font-bold">您剛完成了：<span className="text-indigo-600">{currentTask.title}</span></p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
-                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                    <div className="text-slate-400 text-xs font-bold mb-1 flex items-center justify-center">
-                      <Clock size={12} className="mr-1" /> 總耗時
-                    </div>
-                    <div className="text-2xl font-black text-indigo-600">{formatTime(timer)}</div>
-                 </div>
-                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
-                    <div className="text-slate-400 text-xs font-bold mb-1 flex items-center justify-center">
-                      <AlertTriangle size={12} className="mr-1" /> 錯誤次數
-                    </div>
-                    <div className={`text-2xl font-black ${mistakes === 0 ? 'text-emerald-500' : 'text-red-500'}`}>{mistakes}</div>
-                 </div>
-              </div>
-              
-              <div className="pt-6 flex flex-col gap-3 justify-center max-w-sm mx-auto">
-                <button
-                  onClick={() => startTask(currentTask)}
-                  className="w-full py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black hover:bg-indigo-100 transition-all flex items-center justify-center border-2 border-indigo-100"
-                >
-                  <RefreshCw size={20} className="mr-2" /> 再練一次
-                </button>
-                <button
-                  onClick={() => setGameState('taskSelection')}
-                  className="w-full py-4 bg-indigo-700 text-white rounded-2xl font-black hover:bg-indigo-800 transition-all flex items-center justify-center shadow-xl transform active:scale-95"
-                >
-                  <Play size={20} className="mr-2" /> 下一個任務
-                </button>
-                <button
-                  onClick={() => setGameState('history')}
-                  className="w-full py-2 text-slate-400 text-sm font-bold hover:text-indigo-600 underline underline-offset-4"
-                >
-                  查看完整成績單
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      <div className="mt-8 text-center space-y-2">
-        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">
-          Cognitive Rehabilitation Tool / Task Sequencing Module
-        </p>
-        <div className="flex justify-center gap-4 text-slate-300">
-           <div className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full bg-emerald-400"></span> 5 步驟 (Basic)</div>
-           <div className="flex items-center gap-1 text-[10px]"><span className="w-2 h-2 rounded-full bg-amber-400"></span> 7 步驟 (Advanced)</div>
-        </div>
-      </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生活步驟排序大師 - 認知訓練遊戲</title>
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons (UMD) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
         @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-4px); }
-          75% { transform: translateX(4px); }
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
         }
         .animate-shake { animation: shake 0.15s ease-in-out 0s 2; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-      `}} />
-    </div>
-  );
-};
+        
+        /* 避免 React 載入前的閃爍 */
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
 
-export default App;
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // 重新封裝 Lucide Icon 組件
+        const Icon = ({ name, size = 24, className = "" }) => {
+            const iconRef = useRef(null);
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons({
+                        attrs: {
+                            class: className,
+                            'stroke-width': 2,
+                            width: size,
+                            height: size
+                        },
+                        nameAttr: 'data-lucide'
+                    });
+                }
+            }, [name, className, size]);
+            return <i data-lucide={name} className={className}></i>;
+        };
+
+        const TASKS_LIBRARY = [
+            // --- 基礎版 (5 步驟) ---
+            { id: 1, difficulty: 'basic', title: "早起刷牙", icon: "🪥", steps: ["拿起牙刷與牙膏", "將牙膏擠在牙刷上", "放入口中均勻刷遍牙齒", "用水漱口並吐掉泡沫", "清洗牙刷並放回原位"] },
+            { id: 2, difficulty: 'basic', title: "洗手消毒", icon: "🧼", steps: ["打開水龍頭弄濕雙手", "抹上肥皂並搓出泡沫", "搓揉手心手背與指縫", "用清水將泡沫沖乾淨", "用乾淨毛巾將手擦乾"] },
+            { id: 3, difficulty: 'basic', title: "穿襯衫", icon: "👔", steps: ["拿起襯衫披在肩上", "右手伸進右邊袖子", "左手伸進左邊袖子", "由下往上扣好扣子", "調整領口並照鏡子"] },
+            { id: 4, difficulty: 'basic', title: "泡一杯茶", icon: "🍵", steps: ["將茶包放進杯子中", "燒開一壺乾淨的水", "將熱水倒入杯子中", "等待約三分鐘出味", "取出茶包後慢慢享用"] },
+            { id: 5, difficulty: 'basic', title: "澆花水", icon: "🚿", steps: ["拿取澆水壺並裝水", "走到盆栽旁邊", "緩慢將水倒入土壤", "觀察水是否流出底部", "將水壺收回原位"] },
+            { id: 6, difficulty: 'basic', title: "丟垃圾", icon: "🗑️", steps: ["整理並綁好垃圾袋", "將袋子提到門口", "等待垃圾車音樂聲", "將垃圾投進垃圾車", "回家後用肥皂洗手"] },
+            { id: 7, difficulty: 'basic', title: "吃藥藥", icon: "💊", steps: ["核對藥包姓名與時間", "倒一杯溫開水準備", "取出正確劑量的藥片", "將藥片含入口中送服", "將水喝完並觀察反應"] },
+            { id: 8, difficulty: 'basic', title: "摺衣服", icon: "👕", steps: ["從晾衣繩收下衣物", "平鋪在乾淨的床上", "對摺兩袖與身躯", "對齊邊緣整齊收納", "放回衣櫃指定抽屜"] },
+            { id: 9, difficulty: 'basic', title: "使用微波爐", icon: "⏲️", steps: ["將食物放進微波盒", "放入微波爐並關門", "旋轉或輸入加熱時間", "等待提示音響起", "取出食物並小心燙手"] },
+            { id: 10, difficulty: 'basic', title: "梳頭髮", icon: "🪮", steps: ["站在鏡子前面", "拿起梳子或髮刷", "從髮根梳向髮梢", "整理出整齊的髮型", "清理梳子上的髮絲"] },
+            { id: 11, difficulty: 'basic', title: "洗水果", icon: "🍎", steps: ["將水果放入濾籃中", "用流動清水沖洗表面", "輕輕搓揉水果外皮", "瀝乾多餘的水分", "放入盤子中準備食用"] },
+            { id: 12, difficulty: 'basic', title: "穿鞋子", icon: "👟", steps: ["坐在穿鞋椅上", "雙腳套入鞋內", "拉好鞋跟並整理襪子", "繫好鞋帶或黏上魔鬼氈", "站起來走動確認舒適度"] },
+            { id: 13, difficulty: 'basic', title: "整理床鋪", icon: "🛌", steps: ["下床後拉平床單", "將棉被對摺整齊", "拍鬆枕頭並放好", "拉直四周的摺痕", "放上裝飾小枕或玩偶"] },
+            { id: 14, difficulty: 'basic', title: "煮水餃", icon: "🥟", steps: ["大鍋裝水燒至沸騰", "放入冷凍水餃", "用勺子輕輕攪動防黏", "待水餃浮起後再煮一分", "撈起瀝乾裝盤"] },
+            { id: 15, difficulty: 'basic', title: "倒水喝", icon: "🥛", steps: ["拿取乾淨的水杯", "走到飲水機或水壺旁", "平穩地將水注入杯中", "倒至約八分滿處停止", "收回杯子並關閉開關"] },
+            { id: 16, difficulty: 'basic', title: "掃地", icon: "🧹", steps: ["拿起掃帚與畚箕", "從房間角落往內掃", "將灰塵集中成一堆", "掃進畚箕內倒進垃圾桶", "放回清潔用具"] },
+            { id: 17, difficulty: 'basic', title: "換燈泡", icon: "💡", steps: ["關閉電源開關", "準備好新的燈泡", "轉下燒壞的舊燈泡", "轉入新燈泡至卡緊", "打開開關測試亮度"] },
+            { id: 18, difficulty: 'basic', title: "寄信", icon: "✉️", steps: ["寫好信件與收件地址", "貼上正確金額郵票", "檢查信封是否封好", "走到街邊的郵筒旁", "將信件投入收信口"] },
+            { id: 19, difficulty: 'basic', title: "烤吐司", icon: "🍞", steps: ["取出兩片白吐司", "放進烤吐司機內", "設定加熱焦度等級", "待吐司彈起後取出", "抹上喜歡的果醬"] },
+            { id: 20, difficulty: 'basic', title: "聽音樂", icon: "🎵", steps: ["打開播放器或手機", "戴上耳機或打開喇叭", "搜尋想聽的歌手名稱", "點選播放開始聆聽", "調整到舒適音量"] },
+            { id: 21, difficulty: 'basic', title: "修剪指甲", icon: "✂️", steps: ["準備好指甲剪", "找一個光線充足處", "細心修剪指甲邊緣", "用銼刀磨平粗糙處", "清理剪下的指甲屑"] },
+            { id: 22, difficulty: 'basic', title: "搭公車", icon: "🚌", steps: ["在公車站牌等候", "看到車號招手示意", "上車刷卡或投幣", "注意站名預備下車", "按下車鈴並刷卡下車"] },
+            { id: 23, difficulty: 'basic', title: "使用遙控器", icon: "📺", steps: ["拿起電視遙控器", "按下紅色的開關鍵", "按頻道鍵尋找節目", "按音量鍵調整聲音", "不看時再按一次關閉"] },
+            { id: 24, difficulty: 'basic', title: "洗臉", icon: "🧼", steps: ["弄濕臉部與雙手", "擠出少量洗面乳", "在臉上劃圓搓洗", "用清水徹底沖淨", "用乾毛巾按乾臉部"] },
+            { id: 25, difficulty: 'basic', title: "摺紙飛機", icon: "✈️", steps: ["準備一張長方形紙", "對摺找出中心線", "將前端兩角向內摺", "對摺機身並壓平", "摺出左右機翼"] },
+            { id: 51, difficulty: 'basic', title: "穿外套", icon: "🧥", steps: ["抓起外套領口", "一隻手穿進袖管", "另一隻手背後尋找袖口", "兩手伸直拉好衣服", "拉上拉鍊或扣好扣子"] },
+            { id: 52, difficulty: 'basic', title: "繫安全帶", icon: "🦺", steps: ["坐在汽車座位上", "手拉住安全帶插頭", "拉過胸前橫跨身體", "對準插槽用力插下", "聽到喀嚓聲後拉拉看"] },
+            { id: 53, difficulty: 'basic', title: "收雨傘", icon: "🌂", steps: ["走到室內屋簷下", "按下收傘按鈕或滑動", "輕輕抖掉傘面水珠", "將傘布順著傘骨捲起", "扣上魔鬼氈綑綁帶"] },
+            { id: 54, difficulty: 'basic', title: "貼OK繃", icon: "🩹", steps: ["清潔並擦乾傷口", "撕開OK繃外層包裝", "撕下其中一邊背膠紙", "對準傷口輕輕貼上", "撕掉另一邊紙並壓平"] },
+            { id: 55, difficulty: 'basic', title: "削鉛筆", icon: "✏️", steps: ["準備削鉛筆機與鉛筆", "將鉛筆插入削孔", "握住機身固定好", "順時針旋轉手把", "取出確認筆尖銳利"] },
+            { id: 56, difficulty: 'basic', title: "量體溫", icon: "🌡️", steps: ["拿出體溫計檢查數值", "放在腋下或額頭對準", "靜候幾秒鐘等待警報", "讀取螢幕上的數字", "用酒精棉片消毒儀器"] },
+            { id: 57, difficulty: 'basic', title: "戴口罩", icon: "😷", steps: ["取出乾淨的口罩", "確認正反面與上下緣", "將掛耳繩套入雙耳", "壓緊鼻樑處金屬條", "向下拉開遮住下巴"] },
+            { id: 58, difficulty: 'basic', title: "倒廚餘", icon: "🥣", steps: ["收集餐後剩餘食物", "瀝掉過多的湯汁", "倒入廚餘桶蓋緊", "提著水盆到水槽", "用洗碗精刷洗空盆"] },
+            { id: 59, difficulty: 'basic', title: "戴帽子", icon: "🧢", steps: ["挑選喜歡的帽子", "手扶住帽沿兩側", "由額頭往後腦勺套下", "調整前後位置與高低", "照鏡子確認是否端正"] },
+            { id: 60, difficulty: 'basic', title: "蓋印章", icon: "🖄", steps: ["準備文件與印章", "確認印章蓋面朝下", "在印泥上均勻沾取", "垂直對準蓋章位置", "用力下壓後垂直提起"] },
+            { id: 61, difficulty: 'basic', title: "穿襪子", icon: "🧦", steps: ["拿出一雙乾淨襪子", "雙手撐開襪口", "對準腳尖套入", "順著腳跟往上拉", "理平腳背的摺痕"] },
+            { id: 62, difficulty: 'basic', title: "關窗戶", icon: "🪟", steps: ["走向開啟的窗邊", "抓住窗戶把手", "緩緩向內或向側推移", "確認窗邊完全密合", "扣上安全鎖扣"] },
+            { id: 63, difficulty: 'basic', title: "整理報紙", icon: "📰", steps: ["收集散亂的各版報紙", "依照版序對齊邊緣", "將報紙對摺成一半", "放在指定的舊報堆", "去洗手洗掉油墨"] },
+            { id: 64, difficulty: 'basic', title: "切香蕉", icon: "🍌", steps: ["洗淨雙手並拿餐刀", "剝開香蕉的外皮", "放在乾淨的盤子上", "切成一塊塊圓形", "收拾香蕉皮丟棄"] },
+            { id: 65, difficulty: 'basic', title: "掛衣服", icon: "🧥", steps: ["準備好空衣架", "拿起洗好的衣物", "將衣架撐進領口", "調整左右肩位置", "掛入衣櫥橫桿上"] },
+            { id: 66, difficulty: 'basic', title: "翻日曆", icon: "📅", steps: ["確認今天的日期", "撕下昨天的日曆紙", "對齊虛線小心撕開", "將廢紙丟入資源回收", "看一眼今天的農曆或備註"] },
+            { id: 67, difficulty: 'basic', title: "使用訂書機", icon: "📌", steps: ["整理好要裝訂的紙張", "對齊左上角的邊緣", "將紙放進訂書機口", "用力壓下訂書機頂部", "檢查釘子是否壓平"] },
+            { id: 68, difficulty: 'basic', title: "量體重", icon: "⚖️", steps: ["將體重計放在平地", "脫掉厚重外套或鞋子", "雙腳平衡站在中央", "靜止等待數字固定", "紀錄數值後走下秤子"] },
+            { id: 69, difficulty: 'basic', title: "喝利樂包", icon: "🧃", steps: ["拿取一盒紙盒飲料", "拔下側邊的吸管", "撕開吸管塑膠套", "插入圓孔錫箔紙", "慢慢吸吮並注意溢出"] },
+            { id: 70, difficulty: 'basic', title: "梳鬍鬚", icon: "🧔", steps: ["站在鏡子前面", "拿起專用的鬍鬚梳", "從上往下梳理整齊", "修剪突出的雜亂毛髮", "用濕布擦拭臉頰"] },
+            { id: 71, difficulty: 'basic', title: "關瓦斯", icon: "🔥", steps: ["確認鍋具已移開", "旋轉爐台開關至關閉", "確認火焰完全熄滅", "檢查瓦斯管線總開關", "離開廚房前再次巡視"] },
+            { id: 72, difficulty: 'basic', title: "拿信件", icon: "📮", steps: ["拿起信箱鑰匙", "走到大門口的信箱處", "插入鑰匙並轉動門蓋", "取出所有信件與廣告", "關好信箱並拔出鑰匙"] },
+            { id: 73, difficulty: 'basic', title: "吹風扇", icon: "🌬️", steps: ["走到電風扇旁邊", "按下插頭連接電源", "選擇適合的風力強弱", "按下轉頭或固定鈕", "享受涼風並保持距離"] },
+            { id: 74, difficulty: 'basic', title: "收碗筷", icon: "🥢", steps: ["用餐完畢站起來", "將筷子放在碗面上", "雙手捧起碗盤送到水槽", "分類放置待洗區域", "擦拭自己用過的桌面"] },
+            { id: 75, difficulty: 'basic', title: "摺衛生紙", icon: "🧻", steps: ["抽取適量的衛生紙", "將紙張平鋪在手中", "左右對摺成正方形", "再次摺疊增加厚度", "放入餐盤旁或口袋備用"] },
+
+            // --- 進階版 (7 步驟) ---
+            { id: 26, difficulty: 'advanced', title: "洗衣服全流程", icon: "🧺", steps: ["分類衣物深淺色", "放進洗衣機內", "倒入洗衣精與柔軟精", "設定洗衣模式", "取出洗好的濕衣物", "衣架撐起並晾在室外", "乾透後收納入櫃"] },
+            { id: 27, difficulty: 'advanced', title: "煮泡麵加蛋", icon: "🍜", steps: ["鍋內裝水煮至沸騰", "放入泡麵麵塊", "倒入所有調味料包", "打入一顆雞蛋進入", "蓋上鍋蓋悶兩分鐘", "攪拌均勻使蛋熟透", "倒入碗中享用"] },
+            { id: 28, difficulty: 'advanced', title: "ATM 領錢", icon: "💵", steps: ["插入提款卡", "輸入個人密碼", "選擇「提款」功能", "輸入要領取的金額", "確認明細表需求", "取出提款卡與收據", "領取現金並清點"] },
+            { id: 29, difficulty: 'advanced', title: "手機充電", icon: "🔌", steps: ["找到手機充電線", "插頭插入牆壁插座", "接頭插入手機底部孔", "確認螢幕顯示充電中", "放置在安全平穩處", "充滿後先拔手機接頭", "最後拔除牆上插頭"] },
+            { id: 30, difficulty: 'advanced', title: "預約門診", icon: "🏥", steps: ["拿出手機或打開電腦", "進入醫院掛號網站", "選擇正確的科別", "挑選合適的看診醫師", "確認日期與時段", "輸入身分證字號掛號", "截圖或記錄掛號號碼"] },
+            { id: 31, difficulty: 'advanced', title: "更換床單", icon: "🛏️", steps: ["移開床上的枕頭被子", "扯下髒掉的舊床單", "鋪上乾淨的新床單", "將四個角固定在床墊", "套上乾淨的枕頭套", "放回被子並鋪平", "將舊床單丟入洗衣籃"] },
+            { id: 32, difficulty: 'advanced', title: "準備出門購物", icon: "🛒", steps: ["檢查家中缺少的物資", "寫下購物清單項目", "帶上環保購物袋", "確認錢包與手機在身上", "穿好鞋子並拿鑰匙", "鎖好家門並確認", "前往附近的超市"] },
+            { id: 33, difficulty: 'advanced', title: "製作火腿三明治", icon: "🥪", steps: ["準備吐司、火腿、起司", "吐司放進烤箱加熱", "火腿放入平底鍋煎熟", "吐司抹上美乃滋", "疊上起司與火腿", "蓋上第二片吐司", "對角切開後盛盤"] },
+            { id: 34, difficulty: 'advanced', title: "整理書桌", icon: "📚", steps: ["收起桌面所有雜物", "用抹布擦拭桌面灰塵", "將文具放回筆筒", "書籍依高度整齊排列", "分類廢棄紙張並丟棄", "整理混亂的電腦線路", "擺放一盆小植物裝飾"] },
+            { id: 35, difficulty: 'advanced', title: "清洗浴室", icon: "🚿", steps: ["戴上防護橡膠手套", "在瓷磚噴灑清潔劑", "用刷子用力搓洗地板", "沖刷掉所有髒污泡沫", "擦拭鏡子與洗臉台", "清洗馬桶內緣並沖水", "開啟通風扇晾乾浴室"] },
+            { id: 36, difficulty: 'advanced', title: "使用吸塵器", icon: "🧹", steps: ["確認吸塵器集塵盒已空", "拉出電線並插入插座", "按下啟動電源開關", "由房間最內處往外吸", "處理沙發縫隙等死角", "吸完後捲回電線", "放回儲藏室收納"] },
+            { id: 37, difficulty: 'advanced', title: "發送電子郵件", icon: "📧", steps: ["打開電腦登入信箱", "點選「撰寫」新信件", "輸入收件人地址", "寫下清楚的信件標題", "輸入正式的內容文字", "檢查是否有附件要傳", "點下發送並確認成功"] },
+            { id: 38, difficulty: 'advanced', title: "洗碗流程", icon: "🥣", steps: ["清除盤中殘餘食物", "將餐具浸泡入水槽", "菜瓜布沾取洗潔精", "搓洗油膩的碗盤", "用大量清水沖掉泡沫", "整齊倒扣在瀝水架", "用乾布擦拭流理台"] },
+            { id: 39, difficulty: 'advanced', title: "給手機裝殼", icon: "📱", steps: ["將手機關機以策安全", "用乾淨布擦拭手機背", "檢查殼內有無灰塵", "手機對齊殼的上緣", "用力壓入下方兩角", "確認開孔與按鍵對齊", "撕開螢幕保護膜"] },
+            { id: 40, difficulty: 'advanced', title: "剪報紙", icon: "📰", steps: ["翻開當日的報紙", "找到感興趣的文章", "準備剪刀與膠水", "沿著文章邊緣剪下", "在剪報本塗抹膠水", "平整貼在紙面中央", "寫下日期與報紙名稱"] },
+            { id: 41, difficulty: 'advanced', title: "參加視訊會議", icon: "💻", steps: ["提早五分鐘坐到電腦前", "確認視訊鏡頭位置", "點選會議室連結進入", "測試麥克風是否正常", "向會議成員揮手打招呼", "會議中專心筆記", "結束後點選離開會議"] },
+            { id: 42, difficulty: 'advanced', title: "到超商寄取貨", icon: "📦", steps: ["告知店員寄取貨服務", "出示手機簡訊或身分證", "確認包裹收件人姓名", "在螢幕上簽名確認", "支付相關運費或款項", "領取包裹與收據", "離開後檢查包裹完好"] },
+            { id: 43, difficulty: 'advanced', title: "烹煮咖哩飯", icon: "🍛", steps: ["將蔬菜與肉類切塊", "下鍋炒香食材至熟", "加入適量清水煮沸", "放入咖哩塊並攪拌", "轉小火燉煮至濃稠", "盛好一碗熱騰騰白飯", "將咖哩淋在白飯上"] },
+            { id: 44, difficulty: 'advanced', title: "規律運動", icon: "🧘", steps: ["換上舒適的運動服", "穿上慢跑鞋並繫好帶", "做五分鐘暖身伸展", "開始主運動如慢跑", "隨時補充足夠水分", "做五分鐘緩和運動", "回家後沖澡更衣"] },
+            { id: 45, difficulty: 'advanced', title: "出門旅行打包", icon: "🧳", steps: ["列出需要攜帶的清單", "準備合適大小行李箱", "放入換洗衣物與內衣", "放入盥洗用具包", "放入手機充電器與行動電源", "放入重要證件與藥物", "拉上拉鍊並確認重量"] },
+            { id: 46, difficulty: 'advanced', title: "整理相簿", icon: "📸", steps: ["挑選出有紀念價值的照片", "準備一本實體相簿", "在照片背後寫下日期", "將照片套入透明護袋", "依照時間順序排列", "加入小貼紙或文字說明", "將相簿放回書架保存"] },
+            { id: 47, difficulty: 'advanced', title: "修理自行車鏈條", icon: "🚲", steps: ["將單車翻轉倒立放置", "戴上髒污防護手套", "將鏈條掛回齒輪盤", "手轉踏板測試順暢度", "噴灑潤滑油於鏈條上", "用抹布擦拭多餘油漬", "反轉單車恢復正常"] },
+            { id: 48, difficulty: 'advanced', title: "使用自動洗衣店", icon: "🧺", steps: ["帶著髒衣物到自助店", "選定一台空的洗衣機", "放入衣物並關緊門", "投幣或使用儲值卡", "加入自動販賣機的蠟紙", "等待洗衣完成提示", "將衣物移至烘乾機"] },
+            { id: 49, difficulty: 'advanced', title: "種植盆栽", icon: "🪴", steps: ["挑選適合室內的植物", "在空盆中倒入底層土", "將植物移入花盆中央", "填滿四周的腐葉土", "用手輕輕壓實表面", "均勻澆水直到流出", "放置在有陽光通風處"] },
+            { id: 50, difficulty: 'advanced', title: "準備迎接客人", icon: "🤝", steps: ["確認客人的到達時間", "打掃客廳與沙發區", "準備好乾淨的水杯茶葉", "擺放一些水果或小點心", "換上整潔的家居服", "提早至門口等待門鈴", "熱情開門迎接並問候"] },
+            { id: 76, difficulty: 'advanced', title: "網路銀行轉帳", icon: "💻", steps: ["打開手機網路銀行APP", "輸入身分證與密碼登入", "選擇「即時轉帳」功能", "輸入受款人的銀行代碼", "填寫正確的銀行帳號", "輸入轉帳金額並點確認", "再次核對明細後送出"] },
+            { id: 77, difficulty: 'advanced', title: "預約計程車", icon: "🚕", steps: ["打開叫車服務APP", "確認定位為目前所在地", "手動輸入目的地點名稱", "選擇想搭乘的車型等級", "核對預估車資與時間", "按下「立即叫車」按鈕", "觀察地圖上車輛的距離"] },
+            { id: 78, difficulty: 'advanced', title: "整理藥盒(一週份)", icon: "💊", steps: ["準備一個七天分裝藥盒", "拿出所有常備藥袋核對", "依早中晚標示打開蓋子", "逐一放入正確的藥片數", "檢查每個格位有無漏放", "確實扣好每個格蓋", "將剩餘藥包收回原位"] },
+            { id: 79, difficulty: 'advanced', title: "在餐廳點餐", icon: "🍴", steps: ["坐下後翻開精美菜單", "考慮想吃的主餐與口味", "招手示意服務生到桌邊", "清楚口述想點的餐點名", "詢問有無忌口或過敏原", "確認點餐明細是否正確", "合上菜單並交還給店員"] },
+            { id: 80, difficulty: 'advanced', title: "換垃圾袋(大垃圾桶)", icon: "🗑️", steps: ["將裝滿的垃圾包紮好", "從桶內提起丟入收集區", "拿取捲筒式新垃圾袋", "撕下一張並拉開撐平", "將袋口對準垃圾桶內緣", "把多餘邊緣反摺固定住", "拍打底部使袋內無空氣"] },
+            { id: 81, difficulty: 'advanced', title: "到圖書館借書", icon: "📖", steps: ["進入圖書館保持安靜", "使用查詢機搜尋書名", "找到對應的書架與分類", "從架上取下想借的書", "持借閱證到自動借書機", "刷讀條碼並確認冊數", "領取收據並將書放入袋"] },
+            { id: 82, difficulty: 'advanced', title: "做水果沙拉", icon: "🥗", steps: ["洗淨蘋果、葡萄與番茄", "將大型水果切成適當塊狀", "放入透明的沙拉大碗中", "加入優格或少許蜂蜜", "用夾子輕輕攪拌均勻", "灑上一些堅果或碎餅乾", "放進冰箱冷藏後享用"] },
+            { id: 83, difficulty: 'advanced', title: "清洗抽油煙機濾網", icon: "🍳", steps: ["關閉廚房瓦斯與電源", "旋下濾網固定螺絲", "放入加了小蘇打的熱水", "浸泡十五分鐘分解油垢", "用鋼刷用力刷洗網格", "用清水沖淨殘留泡沫", "晾乾後重新裝回機身"] },
+            { id: 84, difficulty: 'advanced', title: "辦理飯店入住", icon: "🏨", steps: ["抵達櫃台出示身分證件", "核對訂房日期與房型", "在入住表格上親自簽名", "聽取早餐時間與設施說明", "領取房間感應房卡", "確認行李是否需要運送", "搭乘電梯尋找房間號碼"] },
+            { id: 85, difficulty: 'advanced', title: "使用咖啡機(膠囊式)", icon: "☕", steps: ["確認後方水箱水量充足", "按下開關預熱至綠燈亮", "打開上蓋放入咖啡膠囊", "放下把手鎖緊膠囊倉", "將杯子放在出水口下方", "按大杯或小杯啟動萃取", "丟棄用過的膠囊並關機"] },
+            { id: 86, difficulty: 'advanced', title: "整理舊衣捐贈", icon: "🧥", steps: ["檢查衣物有無破損汙漬", "將不穿的衣物分類整理", "用洗衣機清洗並曬乾", "整齊摺疊放入紙箱中", "封好箱口並寫上捐贈類", "上網尋找合法的公益團體", "親自載送或請物流來收"] },
+            { id: 87, difficulty: 'advanced', title: "安裝視訊軟體(Zoom)", icon: "💻", steps: ["打開網頁瀏覽器搜尋官網", "點選下載按鈕下載安裝檔", "點擊兩下安裝檔開始安裝", "輸入電子信箱註冊帳號", "到信箱點選驗證信啟用", "設定個人頭像與顯示名稱", "輸入會議編號測試鏡頭"] },
+            { id: 88, difficulty: 'advanced', title: "清洗空調濾網", icon: "❄️", steps: ["拔掉室內機電源插頭", "雙手打開室內機外蓋", "小心取出黑色尼龍濾網", "用蓮蓬頭沖洗灰塵積累面", "放在陰涼處完全風乾", "依序推回原槽位並扣緊", "插回電源啟動送風測試"] },
+            { id: 89, difficulty: 'advanced', title: "到郵局寄包裹", icon: "📦", steps: ["將物品放入結實的紙箱", "填寫寄件人與收件人姓名", "持箱子到郵局抽取號碼牌", "等候叫號並搬上櫃台秤重", "選擇掛號或快捷寄送方式", "支付運費並領取執據", "記錄單號以便後續追蹤"] },
+            { id: 90, difficulty: 'advanced', title: "使用烘衣機", icon: "🔥", steps: ["將脫水後的濕衣物放入", "清理過濾網上的棉絮", "關緊烘衣機圓形玻璃門", "依材質設定烘乾溫度", "投幣或點選啟動按鈕", "等待運轉結束警告音", "取出熱騰騰的乾衣物"] },
+            { id: 91, difficulty: 'advanced', title: "搭乘高鐵(購票到乘車)", icon: "🚄", steps: ["到自動售票機選擇車次", "輸入身分證字號與張數", "投入紙鈔或刷卡付費", "領取實體磁卡車票", "將票插入閘門感應進入", "找到對應的月台與車廂", "對號入座並繫好餐桌"] },
+            { id: 92, difficulty: 'advanced', title: "更新手機系統", icon: "📱", steps: ["進入手機的「設定」選單", "點選「軟體更新」項目", "按下載並安裝更新檔案", "確認電量充足或接上充電", "等待進度條跑完並重啟", "輸入密碼重新進入主畫面", "檢查新功能是否運作正常"] },
+            { id: 93, difficulty: 'advanced', title: "準備家庭聚餐菜單", icon: "🥘", steps: ["確認聚餐人數與飲食偏好", "挑選冷盤、主菜與湯品", "列出所需食材與調味料", "提早一天到市場採買", "清洗食材並進行前處理", "依序下鍋烹飪各種料理", "擺盤上桌並裝飾餐飲區"] },
+            { id: 94, difficulty: 'advanced', title: "使用電子地圖導航", icon: "📍", steps: ["打開Google地圖應用程式", "輸入要去的地標或地址", "選擇交通方式(車、步、車)", "點選下方「開始導航」鈕", "依照語音指示進行轉彎", "注意路標與導航箭頭方向", "抵達終點後關閉導航程式"] },
+            { id: 95, difficulty: 'advanced', title: "申請會員卡(實體店面)", icon: "💳", steps: ["詢問店員有無會員制度", "填寫姓名、電話與生日表", "勾選同意個資處理說明", "交還給店員進行電腦建檔", "當場領取或設定電子卡號", "下載店家的專屬手機APP", "首次消費累積紅利點數"] },
+            { id: 96, difficulty: 'advanced', title: "清洗窗簾", icon: "🪟", steps: ["搬梯子卸下窗簾掛鉤", "取下所有金屬或塑膠扣", "放入大型洗衣袋保護", "使用中性洗劑進行弱洗", "脫水後在陰涼處吊掛晾乾", "用蒸氣熨斗燙平摺痕", "重新掛回窗桿並整理摺皺"] },
+            { id: 97, difficulty: 'advanced', title: "設定鬧鐘(多個時段)", icon: "⏰", steps: ["打開手機時鐘應用程式", "切換到「鬧鐘」分頁", "按加號新增一個起床時間", "設定鈴聲與震動模式", "儲存後再按加號設午睡鐘", "檢查右上角鬧鐘圖示有無", "睡前確認音量是否開啟"] },
+            { id: 98, difficulty: 'advanced', title: "領取網路購物包裹(i郵箱)", icon: "📦", steps: ["收到取件代碼簡訊通知", "走到最近的i郵箱櫃位前", "點選螢幕上的「領取郵件」", "輸入手機號碼與簡訊代碼", "等待對應的櫃門自動彈開", "取出包裹並確實關好門", "掃描包裹確認無誤後離開"] },
+            { id: 99, difficulty: 'advanced', title: "整理盆栽枯葉", icon: "🪴", steps: ["搬盆栽到光線充足處", "戴上園藝手套準備剪刀", "仔細檢查植物發黃葉片", "從葉柄基部斜剪下枯葉", "清理土表掉落的枯枝落葉", "輕輕翻動表層土壤通氣", "噴灑適量水分保持濕潤"] },
+            { id: 100, difficulty: 'advanced', title: "規劃一日旅遊行程", icon: "🗺️", steps: ["決定想去的城市或主題", "上網搜尋必去景點與美食", "在地圖上安排順路的動線", "估計每個點的停留時間", "查閱交通工具時刻表", "預約熱門餐廳或門票", "將行程存入手機備忘錄"] }
+        ];
+
+        const App = () => {
+            const [gameState, setGameState] = useState('menu');
+            const [difficulty, setDifficulty] = useState(null);
+            const [currentTask, setCurrentTask] = useState(null);
+            const [shuffledOptions, setShuffledOptions] = useState([]);
+            const [userSequence, setUserSequence] = useState([]);
+            const [feedback, setFeedback] = useState(null);
+            const [timer, setTimer] = useState(0);
+            const [mistakes, setMistakes] = useState(0);
+            const [historyRecords, setHistoryRecords] = useState([]);
+            
+            const timerRef = useRef(null);
+
+            useEffect(() => {
+                if (gameState === 'playing') {
+                    timerRef.current = setInterval(() => setTimer(prev => prev + 1), 1000);
+                } else {
+                    clearInterval(timerRef.current);
+                }
+                return () => clearInterval(timerRef.current);
+            }, [gameState]);
+
+            const selectDifficulty = (diff) => {
+                setDifficulty(diff);
+                setGameState('taskSelection');
+            };
+
+            const startTask = (task) => {
+                setCurrentTask(task);
+                setShuffledOptions([...task.steps].sort(() => Math.random() - 0.5));
+                setUserSequence([]);
+                setFeedback(null);
+                setTimer(0);
+                setMistakes(0);
+                setGameState('playing');
+            };
+
+            const handleStepClick = (step) => {
+                if (feedback === 'correct' || userSequence.includes(step)) return;
+                const nextSequence = [...userSequence, step];
+                const currentIndex = nextSequence.length - 1;
+
+                if (step !== currentTask.steps[currentIndex]) {
+                    setFeedback('incorrect');
+                    setMistakes(prev => prev + 1);
+                    setTimeout(() => setFeedback(null), 1000);
+                } else {
+                    setUserSequence(nextSequence);
+                    if (nextSequence.length === currentTask.steps.length) {
+                        setFeedback('correct');
+                        const newRecord = {
+                            id: Date.now(),
+                            title: currentTask.title,
+                            difficulty: currentTask.difficulty,
+                            time: timer,
+                            errors: mistakes + 1 - 1, // Ensure number type
+                            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                        };
+                        setHistoryRecords(prev => [newRecord, ...prev]);
+                        setTimeout(() => setGameState('result'), 1500);
+                    }
+                }
+            };
+
+            const formatTime = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2, '0')}`;
+            const filteredTasks = TASKS_LIBRARY.filter(t => t.difficulty === difficulty);
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 font-sans text-slate-800">
+                    <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100">
+                        
+                        <div className="bg-indigo-700 p-6 text-white flex justify-between items-center shadow-lg">
+                            <div>
+                                <h1 className="text-2xl font-bold flex items-center tracking-tight">
+                                    <Icon name="layers" size={26} className="mr-2" /> 生活步驟大師
+                                </h1>
+                                <p className="text-indigo-200 text-xs mt-1 uppercase tracking-widest font-semibold">100+ 任務訓練系統</p>
+                            </div>
+                            <div className="flex gap-2">
+                                {gameState !== 'menu' && (
+                                    <button onClick={() => setGameState('history')} className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-full transition-all">
+                                        <Icon name="history" size={20} />
+                                    </button>
+                                )}
+                                {gameState !== 'menu' && (
+                                    <button onClick={() => setGameState('menu')} className="p-2 bg-indigo-600 hover:bg-indigo-500 rounded-full transition-all">
+                                        <Icon name="home" size={20} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-6">
+                            {gameState === 'menu' && (
+                                <div className="space-y-6 text-center py-4">
+                                    <div className="flex justify-center gap-4 mb-2">
+                                        <button onClick={() => setGameState('history')} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 rounded-full hover:bg-slate-200 transition-colors font-bold text-sm">
+                                            <Icon name="history" size={16} /> 查看歷史成績
+                                        </button>
+                                    </div>
+                                    <h2 className="text-xl font-bold text-slate-600">請選擇挑戰難度：</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <button onClick={() => selectDifficulty('basic')} className="group relative overflow-hidden p-8 bg-white border-4 border-emerald-100 rounded-3xl hover:border-emerald-500 transition-all hover:shadow-xl">
+                                            <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">🌱</div>
+                                            <h3 className="text-2xl font-black text-emerald-700">基礎等級</h3>
+                                            <div className="mt-3 flex flex-col items-center">
+                                                <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold mb-1">50 個任務</span>
+                                                <span className="text-emerald-600/70 font-bold">每題 5 步驟</span>
+                                            </div>
+                                        </button>
+                                        <button onClick={() => selectDifficulty('advanced')} className="group relative overflow-hidden p-8 bg-white border-4 border-amber-100 rounded-3xl hover:border-amber-500 transition-all hover:shadow-xl">
+                                            <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">🌳</div>
+                                            <h3 className="text-2xl font-black text-amber-700">進階等級</h3>
+                                            <div className="mt-3 flex flex-col items-center">
+                                                <span className="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-xs font-bold mb-1">50 個任務</span>
+                                                <span className="text-amber-600/70 font-bold">每題 7 步驟</span>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {gameState === 'taskSelection' && (
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center border-b pb-4 mb-4">
+                                        <button onClick={() => setGameState('menu')} className="flex items-center text-indigo-600 font-bold hover:translate-x-1 transition-transform">
+                                            <Icon name="chevron-left" size={20} /> 返回
+                                        </button>
+                                        <div className={`px-4 py-1 rounded-full text-xs font-black uppercase ${difficulty === 'basic' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                            {difficulty === 'basic' ? '基礎任務' : '進階任務'}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {filteredTasks.map(task => (
+                                            <button key={task.id} onClick={() => startTask(task)} className="flex items-center p-4 bg-slate-50 border-2 border-transparent rounded-2xl hover:bg-white hover:border-indigo-400 hover:shadow-lg transition-all text-left group">
+                                                <span className="text-3xl mr-4 bg-white w-12 h-12 flex items-center justify-center rounded-xl shadow-sm group-hover:scale-110 transition-transform">{task.icon}</span>
+                                                <div className="flex-1">
+                                                    <span className="text-lg font-bold text-slate-700 block">{task.title}</span>
+                                                    <span className="text-xs text-slate-400 font-medium tracking-tight">ID: #{task.id}</span>
+                                                </div>
+                                                <Icon name="arrow-right" size={18} className="text-slate-300 group-hover:text-indigo-500" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {gameState === 'history' && (
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center border-b pb-4 mb-4">
+                                        <h2 className="text-xl font-black text-slate-700 flex items-center">
+                                            <Icon name="history" className="mr-2 text-indigo-600" /> 學習成就榜
+                                        </h2>
+                                        <button onClick={() => setHistoryRecords([])} className="text-red-400 hover:text-red-600 flex items-center text-xs font-bold">
+                                            <Icon name="trash-2" size={14} className="mr-1" /> 清除
+                                        </button>
+                                    </div>
+                                    {historyRecords.length === 0 ? (
+                                        <div className="py-20 text-center text-slate-400">
+                                            <Icon name="bar-chart" size={48} className="mx-auto mb-4 opacity-20" />
+                                            <p className="font-bold">目前還沒有紀錄喔！</p>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                            {historyRecords.map(record => (
+                                                <div key={record.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className={`w-2 h-2 rounded-full ${record.difficulty === 'basic' ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                                                            <h4 className="font-black text-slate-700">{record.title}</h4>
+                                                        </div>
+                                                        <div className="flex items-center text-[10px] text-slate-400 font-bold tracking-tighter uppercase">
+                                                            <Icon name="calendar" size={12} className="mr-1" /> {record.date}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex gap-4">
+                                                        <div className="text-center">
+                                                            <div className="text-[10px] text-slate-400 font-bold">耗時</div>
+                                                            <div className="font-black text-indigo-600 text-sm">{formatTime(record.time)}</div>
+                                                        </div>
+                                                        <div className="text-center">
+                                                            <div className="text-[10px] text-slate-400 font-bold">錯誤</div>
+                                                            <div className={`font-black text-sm ${record.errors > 0 ? 'text-red-500' : 'text-emerald-500'}`}>{record.errors}</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <button onClick={() => setGameState('menu')} className="w-full mt-4 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 transition-colors">返回</button>
+                                </div>
+                            )}
+
+                            {gameState === 'playing' && currentTask && (
+                                <div className="space-y-6">
+                                    <div className="flex justify-between items-center bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+                                        <div className="flex items-center text-indigo-600 font-black">
+                                            <Icon name="clock" size={16} className="mr-1" /> {formatTime(timer)}
+                                        </div>
+                                        <div className="flex items-center text-red-500 font-black">
+                                            <Icon name="alert-triangle" size={16} className="mr-1" /> 錯誤: {mistakes}
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <span className="text-5xl mb-2 block">{currentTask.icon}</span>
+                                        <h2 className="text-2xl font-black text-slate-800">{currentTask.title}</h2>
+                                        <p className="text-slate-400 text-sm font-bold">請按正確順序點選下方步驟</p>
+                                    </div>
+                                    <div className="min-h-[160px] bg-indigo-50/50 rounded-3xl p-5 border-2 border-dashed border-indigo-200">
+                                        <div className="flex flex-wrap gap-3">
+                                            {userSequence.map((step, idx) => (
+                                                <div key={idx} className="bg-white text-indigo-700 border-2 border-indigo-600 px-4 py-2 rounded-2xl flex items-center shadow-sm">
+                                                    <span className="mr-3 font-black bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px]">{idx + 1}</span>
+                                                    <span className="font-bold text-sm">{step}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="h-6 flex justify-center items-center">
+                                        {feedback === 'correct' && <div className="text-emerald-600 font-black flex items-center"><Icon name="check-circle-2" size={18} className="mr-2"/>正確！</div>}
+                                        {feedback === 'incorrect' && <div className="text-red-500 font-black animate-shake flex items-center"><Icon name="x-circle" size={18} className="mr-2"/>順序不對喔！</div>}
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {shuffledOptions.map((step, idx) => {
+                                            const isSelected = userSequence.includes(step);
+                                            return (
+                                                <button key={idx} disabled={isSelected || feedback} onClick={() => handleStepClick(step)} className={`text-left p-4 rounded-2xl border-2 transition-all font-bold ${isSelected ? 'bg-slate-50 border-slate-100 text-slate-300 line-through opacity-50' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-400 shadow-sm'}`}>
+                                                    {step}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {gameState === 'result' && (
+                                <div className="text-center py-8 space-y-6">
+                                    <div className="p-8 bg-yellow-50 rounded-full text-yellow-500 inline-block animate-pulse">
+                                        <Icon name="award" size={80} />
+                                    </div>
+                                    <h2 className="text-3xl font-black text-slate-800">完成任務！</h2>
+                                    <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                                        <div className="bg-slate-50 p-4 rounded-2xl border">
+                                            <div className="text-slate-400 text-xs font-bold mb-1">總耗時</div>
+                                            <div className="text-2xl font-black text-indigo-600">{formatTime(timer)}</div>
+                                        </div>
+                                        <div className="bg-slate-50 p-4 rounded-2xl border">
+                                            <div className="text-slate-400 text-xs font-bold mb-1">錯誤次數</div>
+                                            <div className="text-2xl font-black text-red-500">{mistakes}</div>
+                                        </div>
+                                    </div>
+                                    <div className="pt-6 flex flex-col gap-3 max-w-sm mx-auto">
+                                        <button onClick={() => startTask(currentTask)} className="w-full py-4 bg-indigo-50 text-indigo-700 rounded-2xl font-black border-2 border-indigo-100 flex justify-center items-center">
+                                            <Icon name="refresh-cw" size={20} className="mr-2"/>再練一次
+                                        </button>
+                                        <button onClick={() => setGameState('taskSelection')} className="w-full py-4 bg-indigo-700 text-white rounded-2xl font-black shadow-xl flex justify-center items-center">
+                                            <Icon name="play" size={20} className="mr-2"/>下一個任務
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
